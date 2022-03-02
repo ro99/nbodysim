@@ -87,7 +87,7 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
     // Request access to that GPU
     let (device, queue) = adapter.request_device(
         &wgpu::DeviceDescriptor {
-            features: wgpu::Features::empty(),
+            features: wgpu::Features::VERTEX_WRITABLE_STORAGE,
             limits: wgpu::Limits::default(),
             label: None,
         },
@@ -195,7 +195,7 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
                 binding: 1,
                 visibility: wgpu::ShaderStages::COMPUTE,
                 ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Storage { read_only: true }, 
+                    ty: wgpu::BufferBindingType::Storage { read_only: false }, 
                     has_dynamic_offset: false, 
                     min_binding_size: None 
                 },
@@ -276,9 +276,9 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
         },
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::PointList,
-            strip_index_format: Some(wgpu::IndexFormat::Uint16),
+            strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw,
-            cull_mode: Some(wgpu::Face::Front),
+            cull_mode: None,
             unclipped_depth: false,
             polygon_mode: wgpu::PolygonMode::Fill,
             conservative: false,

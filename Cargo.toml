@@ -5,13 +5,15 @@ edition = "2021"
 
 [dependencies]
 winit = "0.26.1"
-wgpu = "0.12.0"
+wgpu = { version = "0.12.0", features = ["spirv"] }
 cgmath = "0.18.0"
 raw-window-handle = "0.4.2"
 rand = "0.8.4"
 rand_distr = "0.4.1"
 ron = "0.7.0"
 serde = "1.0.104"
+bytemuck = { version = "1.7.3", features = [ "derive" ] }
+pollster = "0.2"
 
 [build-dependencies]
 glsl-to-spirv = "0.1.7"

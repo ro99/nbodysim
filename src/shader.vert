@@ -11,7 +11,7 @@ struct Particle {
     vec3 pos; // 0, 1, 2
     float radius; // 7
     vec3 vel; // 4, 5, 6
-    double mass; // 7, 8
+    float mass; // 7, 8
 };
 
 layout(set = 0, binding = 0) uniform GlobalsBuffer {

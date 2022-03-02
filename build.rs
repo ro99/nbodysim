@@ -13,8 +13,7 @@ fn main() {
     fs::write(
         &Path::new(&manifest_dir).join("src/shader.comp.spv"),
         cs_bytes,
-    )
-    .unwrap();
+    ).unwrap();
 
     let vs = include_str!("src/shader.vert");
     let mut vs_compiled = glsl_to_spirv::compile(vs, glsl_to_spirv::ShaderType::Vertex).unwrap();
