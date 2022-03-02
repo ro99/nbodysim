@@ -1,17 +1,16 @@
 [package]
 name = "nbodysim"
-version = "1.0.0"
-authors = ["timokoesters <timo@koesters.xyz>"]
-edition = "2018"
+version = "2.0.0"
+edition = "2021"
 
 [dependencies]
-winit = "0.25.0"
-wgpu = "0.4.0"
+winit = "0.26.1"
+wgpu = "0.12.0"
 cgmath = "0.18.0"
-raw-window-handle = "0.3.3"
+raw-window-handle = "0.4.2"
 rand = "0.8.4"
 rand_distr = "0.4.1"
-ron = "0.6.4"
+ron = "0.7.0"
 serde = "1.0.104"
 
 [build-dependencies]
