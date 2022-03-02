@@ -64,9 +64,9 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
         .request_device(
             &wgpu::DeviceDescriptor {
                 label: Some("device_descriptor"),
-                features: wgpu::Features::SHADER_FLOAT64
-                    | wgpu::Features::BUFFER_BINDING_ARRAY
-                    | wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY
+                features: //wgpu::Features::SHADER_FLOAT64
+                    //| wgpu::Features::BUFFER_BINDING_ARRAY
+                     wgpu::Features::STORAGE_RESOURCE_BINDING_ARRAY
                     | wgpu::Features::VERTEX_WRITABLE_STORAGE,
                 limits: wgpu::Limits::default(),
             },
