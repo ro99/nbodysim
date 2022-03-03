@@ -101,35 +101,30 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
     // Load fragment shader
     let fs_module = device.create_shader_module(&wgpu::include_spirv!("shader.frag.spv"));
 
+    // Create globals buffer to give global information to the shader
     let globals_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Globals Buffer"),
+        label: Some("globals"),
         contents: bytemuck::cast_slice(&[globals]),
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     });
 
     // Create buffer for the previous state of the particles
-    let old_buffer = device.create_buffer(&wgpu::BufferDescriptor {  //READ ONLY
-        label: Some("Previous State of the Particles Buffer"),
-        size: particles_size,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST,
-        mapped_at_creation: true,                   // or false?
-    });
-
-    let current_buffer_initializer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Particles Buffer"),
+    let old_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("old_particles"),
         contents: bytemuck::cast_slice(&particles),
-        usage: wgpu::BufferUsages::COPY_SRC,
+        usage: wgpu::BufferUsages::STORAGE
+            | wgpu::BufferUsages::COPY_SRC
+            | wgpu::BufferUsages::COPY_DST,
     });
 
     // Create buffer for the current state of the particles
     let current_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("Current State of the Particles Buffer"),
-        mapped_at_creation: false,
+        label: Some("current_particles"),
         size: particles_size,
         usage: wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_SRC
             | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
     });
 
     // Create swap chain to render images to
@@ -329,7 +324,7 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
 
         // Initialize current particle buffer
         encoder.copy_buffer_to_buffer(
-            &current_buffer_initializer,
+            &old_buffer,
             0,
             &current_buffer,
             0,
@@ -449,16 +444,16 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
                     size = new_size;
 
                     // Reset swap chain, it's outdated
-                    config.width = new_size.width;
-                    config.height = new_size.height;
+                    config.width = size.width;
+                    config.height = size.height;
                     surface.configure(&device, &config);
 
                     // Reset depth texture
                     let depth_texture = device.create_texture(&wgpu::TextureDescriptor {
                         label: Some("Front Particle Texture"),
                         size: wgpu::Extent3d {
-                            width: new_size.width,
-                            height: new_size.height,
+                            width: size.width,
+                            height: size.height,
                             depth_or_array_layers: 1,
                         },
                         mip_level_count: 1,
@@ -479,7 +474,8 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
                 last_tick = Instant::now();
 
                 let frame = surface.get_current_texture().unwrap();
-                
+                let frame_view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+
                 let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor { 
                     label: None 
                 });
@@ -555,10 +551,9 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
 
                 {
                     // Render the current state
-                    let texture_view = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
                     let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                         color_attachments: &[wgpu::RenderPassColorAttachment {
-                            view: &texture_view,
+                            view: &frame_view,
                             resolve_target: None,
                             ops: wgpu::Operations { 
                                 load: wgpu::LoadOp::Clear(
@@ -567,13 +562,20 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
                                         g: 0.03,
                                         b: 0.03,
                                         a: 1.0,
-                                    }), store: true },
+                                    }), 
+                                    store: true 
+                                },
                         }],
-                        depth_stencil_attachment: Some(
-                            wgpu::RenderPassDepthStencilAttachment {
+                        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
                                 view: &depth_view,
-                                depth_ops: Some(wgpu::Operations { load: wgpu::LoadOp::Clear(1.0), store: true }),   // maybe false
-                                stencil_ops: Some(wgpu::Operations { load: wgpu::LoadOp::Clear(0), store: true })    // maybe false
+                                depth_ops: Some(wgpu::Operations { 
+                                    load: wgpu::LoadOp::Clear(1.0), 
+                                    store: true 
+                                }),
+                                stencil_ops: Some(wgpu::Operations { 
+                                    load: wgpu::LoadOp::Clear(0), 
+                                    store: true 
+                                })
                             },
                         ),
                         label: None,
@@ -584,6 +586,7 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
                 }
 
                 queue.submit([encoder.finish()]);
+                frame.present();
             }
 
             // No more events in queue
