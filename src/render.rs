@@ -15,15 +15,13 @@ use wgpu::util::DeviceExt as _;
 const TICKS_PER_FRAME: u32 = 3; // Number of simulation steps per redraw
 const PARTICLES_PER_GROUP: u32 = 256; // REMEMBER TO CHANGE SHADER.COMP
 
-fn build_matrix(pos: Point3<f32>, dir: Vector3<f32>, aspect: f32) -> [[f32; 4]; 4] {
-    { 
-        Matrix4::from(PerspectiveFov {
-            fovy: Rad(PI / 2.0),
-            aspect,
-            near: 1E8,
-            far: 1E14,
-        }) * Matrix4::look_to_rh(pos, dir, Vector3::new(0.0, 1.0, 0.0))
-    }.into()
+fn build_matrix(pos: Point3<f32>, dir: Vector3<f32>, aspect: f32) -> Matrix4<f32> {
+    Matrix4::from(PerspectiveFov {
+        fovy: Rad(PI / 2.0),
+        aspect,
+        near: 1E8,
+        far: 1E14,
+    }) * Matrix4::look_to_rh(pos, dir, Vector3::new(0.0, 1.0, 0.0))
 }
 
 pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
@@ -95,28 +93,13 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
     ).await.unwrap();
 
     // Load compute shader for the simulation
-    let cs = include_bytes!("shader.comp.spv");
-    let cs_data = wgpu::util::make_spirv(cs);
-    let cs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-        label: Some("Compute Shader"),
-        source: cs_data,
-    });
+    let cs_module = device.create_shader_module(&wgpu::include_spirv!("shader.comp.spv"));
 
     // Load vertex shader to set calculate perspective, size and position of particles
-    let vs = include_bytes!("shader.vert.spv");
-    let vs_data = wgpu::util::make_spirv(vs);
-    let vs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-        label: Some("Vertex Shader"),
-        source: vs_data,
-    });
+    let vs_module = device.create_shader_module(&wgpu::include_spirv!("shader.vert.spv"));
 
     // Load fragment shader
-    let fs = include_bytes!("shader.frag.spv");
-    let fs_data = wgpu::util::make_spirv(fs);
-    let fs_module = device.create_shader_module(&wgpu::ShaderModuleDescriptor {
-        label: Some("Fragment Shader"),
-        source: fs_data,
-    });
+    let fs_module = device.create_shader_module(&wgpu::include_spirv!("shader.frag.spv"));
 
     let globals_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Globals Buffer"),
@@ -318,10 +301,10 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
     });
 
     // Where is the camera looking at?
-    let mut camera_dir = -Vector3::from(globals.camera_pos);
+    let mut camera_dir = -globals.camera_pos.to_vec();
     camera_dir = camera_dir.normalize();
     globals.matrix = build_matrix(
-        globals.camera_pos.into(),
+        globals.camera_pos,
         camera_dir,
         size.width as f32 / size.height as f32,
     );
@@ -505,40 +488,32 @@ pub async fn run(mut globals: Globals, particles: Vec<Particle>) {
                 right = camera_dir.cross(Vector3::new(0.0, 1.0, 0.0));
                 right = right.normalize();
 
-                let mut camera_pos = Vector3::from(globals.camera_pos);
-
                 if pressed_keys.contains(&event::VirtualKeyCode::A) {
-                    camera_pos += -right * fly_speed * dt;
-                    globals.camera_pos = camera_pos.into();
+                    globals.camera_pos += -right * fly_speed * dt;
                 }
 
                 if pressed_keys.contains(&event::VirtualKeyCode::D) {
-                    camera_pos += right * fly_speed * dt;
-                    globals.camera_pos = camera_pos.into();
+                    globals.camera_pos += right * fly_speed * dt;
                 }
 
                 if pressed_keys.contains(&event::VirtualKeyCode::W) {
-                    camera_pos += camera_dir * fly_speed * dt;
-                    globals.camera_pos = camera_pos.into();
+                    globals.camera_pos += camera_dir * fly_speed * dt;
                 }
 
                 if pressed_keys.contains(&event::VirtualKeyCode::S) {
-                    camera_pos += -camera_dir * fly_speed * dt;
-                    globals.camera_pos = camera_pos.into();
+                    globals.camera_pos += -camera_dir * fly_speed * dt;
                 }
 
                 if pressed_keys.contains(&event::VirtualKeyCode::Space) {
-                    camera_pos.y -= fly_speed * dt;
-                    globals.camera_pos = camera_pos.into();
+                    globals.camera_pos.y -= fly_speed * dt;
                 }
 
                 if pressed_keys.contains(&event::VirtualKeyCode::LShift) {
-                    camera_pos.y += fly_speed * dt;
-                    globals.camera_pos = camera_pos.into();
+                    globals.camera_pos.y += fly_speed * dt;
                 }
 
                 globals.matrix = build_matrix(
-                    globals.camera_pos.into(),
+                    globals.camera_pos,
                     camera_dir,
                     size.width as f32 / size.height as f32,
                 );
